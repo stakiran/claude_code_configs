@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(psql *)"
+    ]
+  },
+  "model": "claude-opus-4-6",
+  "env": {
+    "DATABASE_URL": "postgresql://localhost:5432/myapp_dev",
+    "REDIS_URL": "redis://localhost:6379"
+  }
+}

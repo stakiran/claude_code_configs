@@ -1,0 +1,30 @@
+{
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matchers": [{"tool": "Write"}],
+      "handler": {
+        "type": "command",
+        "command": "echo",
+        "args": ["ファイル書き込みを検知しました"]
+      }
+    },
+    {
+      "event": "PostToolUse",
+      "matchers": [{"tool": "Bash"}],
+      "handler": {
+        "type": "prompt",
+        "instructions": "コマンド実行結果にエラーが含まれていないか確認してください"
+      }
+    },
+    {
+      "event": "Stop",
+      "matchers": [],
+      "handler": {
+        "type": "command",
+        "command": "npx",
+        "args": ["eslint", "--fix", "."]
+      }
+    }
+  ]
+}
