@@ -135,3 +135,63 @@ samples/
         ├── testing.md             # テスト用ルール（tests/**/*.test.ts に適用）
         └── api.md                 # API用ルール（src/api/** に適用）
 ```
+
+## Q&A
+
+### CLAUDE.md と .claude/rules/ の違いは？
+
+どちらも「Claudeへの指示」を書く場所だが、以下の点が異なる。
+
+| | CLAUDE.md | .claude/rules/*.md |
+|---|---|---|
+| 適用範囲 | 常に全体に適用 | `paths` 指定で特定パスのみに適用可能 |
+| 粒度 | 1ファイルにまとめて書く | トピック別に複数ファイルに分割 |
+| 読み込みタイミング | セッション開始時 | セッション開始時（ただし `paths` 指定ありの場合は該当ファイル操作時） |
+| 条件付き適用 | 不可 | YAML frontmatter で `paths: ["src/**/*.ts"]` のように条件指定可能 |
+
+使い分け:
+
+- **CLAUDE.md**: プロジェクト全体に常に適用したい一般的な指示（ビルド手順、コーディング規約の基本方針、注意事項など）
+- **rules/**: 特定の領域にだけ適用したいルール（TypeScriptファイルだけ、テストだけ、API層だけ、など）
+
+ルールが増えてきたら `rules/` に分割し、CLAUDE.md は全体方針だけに絞るのがよい。
+
+### CLAUDE.md と rules/ はプロンプトにどう結合される？
+
+内部のプロンプト組み立て構造（system prompt か user prompt か等）は公式には非公開。ただし以下は分かっている。
+
+**読み込みタイミングの違い:**
+
+| | CLAUDE.md | rules/（`paths` なし） | rules/（`paths` あり） |
+|---|---|---|---|
+| 読み込み | セッション開始時に即座 | セッション開始時に即座 | 該当パスのファイル操作時に遅延読み込み |
+| 再読み込み | `/compact` 時にディスクから再読み込み | 同左 | 同左 |
+
+**InstructionsLoaded フックで観測できる情報:**
+
+```json
+{
+  "hook_event_name": "InstructionsLoaded",
+  "file_path": "/project/CLAUDE.md",
+  "memory_type": "Project",
+  "load_reason": "session_start"
+}
+```
+
+`load_reason` の値:
+- `session_start` — セッション開始時（CLAUDE.md、`paths` なしの rules）
+- `path_glob_match` — ファイル操作でパスが一致した時（`paths` ありの rules）
+- `nested_traversal` — サブディレクトリの CLAUDE.md 発見時
+- `include` — `@path/to/file` インポート展開時
+
+**公開されていないこと:**
+- system prompt と user prompt のどちらに注入されるか
+- tool 定義との相対的な位置関係
+- 複数スコープの指示がどう結合・順序付けされるか
+- 内部で使われる XML タグ構造
+
+**実用上の最大の違い — コンテキスト消費の効率:**
+- CLAUDE.md: 毎セッション必ず全文がコンテキストに載る
+- rules/（`paths` あり）: 関係ないファイルを扱っている間はコンテキストを消費しない
+
+プロンプト上の配置位置の違いよりも、「いつコンテキストに載るか」が実用上の最大の違いとなる。
